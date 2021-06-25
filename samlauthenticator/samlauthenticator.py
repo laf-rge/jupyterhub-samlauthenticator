@@ -584,7 +584,7 @@ class SAMLAuthenticator(Authenticator):
     def _get_rid_from_saml_doc(self, signed_xml, decoded_saml_doc):
         xpath_with_namespaces = self._make_xpath_builder()
 
-        xpath_fun = xpath_with_namespaces('//saml:Attribute[1]/saml:AttributeValue[1]/text()')
+        xpath_fun = xpath_with_namespaces('//saml:Attribute[@Name="RID"]/saml:AttributeValue[1]/text()')
         xpath_result = xpath_fun(signed_xml)
 
         if isinstance(xpath_result, etree._ElementUnicodeResult):
