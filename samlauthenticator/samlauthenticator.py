@@ -581,6 +581,21 @@ class SAMLAuthenticator(Authenticator):
         self.log.warning('Could not find name from name XPath')
         return None
 
+    def _get_rid_from_saml_doc(self, signed_xml, decoded_saml_doc):
+        xpath_with_namespaces = self._make_xpath_builder()
+
+        xpath_fun = xpath_with_namespaces('//saml:Attribute[1]/saml:AttributeValue[1]/text()')
+        xpath_result = xpath_fun(signed_xml)
+
+        if isinstance(xpath_result, etree._ElementUnicodeResult):
+            return xpath_result
+        if type(xpath_result) is list and len(xpath_result) > 0:
+            return xpath_result[0]
+
+        self.log.warning('Could not find RID')
+
+        return None
+
     def _get_roles_from_saml_etree(self, signed_xml):
         if self.xpath_role_location:
             xpath_with_namespaces = self._make_xpath_builder()
@@ -612,7 +627,7 @@ class SAMLAuthenticator(Authenticator):
 
         return self._get_roles_from_saml_etree(decoded_saml_doc)
 
-    def _optional_user_add(self, username):
+    def _optional_user_add(self, username, rid=None):
         try:
             pwd.getpwnam(username)
             # Found the user, we don't need to create them
@@ -620,14 +635,17 @@ class SAMLAuthenticator(Authenticator):
         except KeyError:
             # Return the `not` here because a 0 return indicates success and I want to
             # say something like "if adding the user is successful, return username"
-            return not subprocess.call([self.create_system_user_binary, username])
+            if rid:
+                return not subprocess.call([self.create_system_user_binary, username])
+            else:
+                return not subprocess.call([self.create_system_user_binary, username, '--uid ', rid])
 
-    def _check_username_and_add_user(self, username):
+    def _check_username_and_add_user(self, username, rid = None):
         if self.validate_username(username) and \
                 self.check_blacklist(username) and \
                 self.check_whitelist(username):
             if self.create_system_users:
-                if self._optional_user_add(username):
+                if self._optional_user_add(username, rid):
                     # Successfully added user
                     return username
                 else:
@@ -690,10 +708,12 @@ class SAMLAuthenticator(Authenticator):
             self.log.debug('Authenticated user using SAML')
             username = self._get_username_from_saml_doc(signed_xml, saml_doc_etree)
             username = self.normalize_username(username)
+            rid = self._get_rid_from_saml_doc(signed_xml, saml_doc_etree)
+            self.log.debug('rid: ' + str(rid))
 
             if self._valid_config_and_roles(signed_xml, saml_doc_etree):
                 self.log.debug('Optionally create and return user: ' + username)
-                return self._check_username_and_add_user(username)
+                return self._check_username_and_add_user(username, rid)
 
             self.log.error('Assertion did not have appropriate roles')
             return None
@@ -868,3 +888,4 @@ class SAMLAuthenticator(Authenticator):
                 ('/hub/logout', SAMLLogoutHandler),
                 ('/metadata', SAMLMetaHandler),
                 ('/hub/metadata', SAMLMetaHandler)]
+

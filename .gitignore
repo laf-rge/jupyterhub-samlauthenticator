@@ -10,3 +10,7 @@ dist/
 
 # IDE settings
 .vscode
+
+.eggs/
+
+*.swp
