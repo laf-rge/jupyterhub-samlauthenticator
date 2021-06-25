@@ -638,7 +638,7 @@ class SAMLAuthenticator(Authenticator):
             if rid:
                 return not subprocess.call([self.create_system_user_binary, username])
             else:
-                return not subprocess.call([self.create_system_user_binary, username, '--uid ', rid])
+                return not subprocess.call([self.create_system_user_binary, username, '--uid ', rid, '-G jupyter-users'])
 
     def _check_username_and_add_user(self, username, rid = None):
         if self.validate_username(username) and \
