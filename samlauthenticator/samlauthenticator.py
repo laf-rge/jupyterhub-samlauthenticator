@@ -283,7 +283,7 @@ class SAMLAuthenticator(Authenticator):
         '''
     )
     create_system_user_binary = Unicode(
-        default_value='useradd',
+        default_value='adduser',
         allow_none=True,
         config=True,
         help='''
@@ -636,9 +636,9 @@ class SAMLAuthenticator(Authenticator):
             # Return the `not` here because a 0 return indicates success and I want to
             # say something like "if adding the user is successful, return username"
             if rid:
-                return not subprocess.call([self.create_system_user_binary, username])
+                return not subprocess.call([self.create_system_user_binary, '--disabled-password', '--quiet', '--gecos', '""', '--uid', rid, username])
             else:
-                return not subprocess.call([self.create_system_user_binary, username, '--uid ', rid])
+                return not subprocess.call([self.create_system_user_binary, '--disabled-password', '--quiet', '--gecos', '""', username])
 
     def _check_username_and_add_user(self, username, rid = None):
         if self.validate_username(username) and \
